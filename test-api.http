@@ -1,0 +1,202 @@
+### Variables
+@baseUrl = "url"
+@token = "token"
+@userId = "userid from thingsboard"
+
+### EXTERNAL APP INTEGRATION:
+### - API menerima user_id dari header x-user-id
+### - External application bertanggung jawab untuk authentication
+### - API hanya handle business logic dan data
+
+### Tambah Item Baru
+POST {{baseUrl}}/item
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+Content-Type: application/json
+
+{
+  "nama": "IKAN KAKAP"
+}
+
+### Ambil Semua Item
+GET {{baseUrl}}/item
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Edit Item (ganti uuid-item dengan ID yang valid)
+PUT {{baseUrl}}/item/uuid-item
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+Content-Type: application/json
+
+{
+  "nama": "Produk A Updated"
+}
+
+### Hapus Item (ganti uuid-item dengan ID yang valid)
+DELETE {{baseUrl}}/item/uuid-item
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Buat Transaksi dengan Item
+POST {{baseUrl}}/transaksi
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+Content-Type: application/json
+
+{
+  "tipe": "PEMASUKAN",
+  "tanggal": "2024-01-17T14:30:00Z",
+  "catatan": "Bolo Bolo",
+  "items": [
+    {
+      "nama_item": "IKAN KAKAP",
+      "qty": 2,
+      "harga_satuan": 50000,
+      "diskon": 0
+    }
+  ]
+}
+
+### Buat Transaksi Tanpa Item
+POST {{baseUrl}}/transaksi
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+Content-Type: application/json
+
+{
+  "tipe": "PENGELUARAN",
+  "tanggal": "2024-01-17T15:00:00Z",
+  "catatan": "Bayar listrik",
+  "total": 150000
+}
+
+### Ambil Semua Transaksi
+GET {{baseUrl}}/transaksi
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Transaksi by ID (ganti uuid-transaksi dengan ID yang valid)
+GET {{baseUrl}}/transaksi/uuid-transaksi
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Edit Transaksi Tanpa Item (ganti uuid-transaksi dengan ID yang valid)
+PUT {{baseUrl}}/transaksi/uuid-transaksi
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+Content-Type: application/json
+
+{
+  "tipe": "PENGELUARAN",
+  "tanggal": "2024-01-17T16:00:00Z",
+  "catatan": "Bayar listrik - Updated",
+  "total": 175000
+}
+
+### Edit Transaksi Dengan Item (ganti uuid dengan ID yang valid)
+PUT {{baseUrl}}/transaksi/uuid-transaksi
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+Content-Type: application/json
+
+{
+  "tipe": "PEMASUKAN",
+  "tanggal": "2024-01-17T16:30:00Z",
+  "catatan": "Penjualan Updated",
+  "items": [
+    {
+      "id": "uuid-item-existing",
+      "nama_item": "IKAN KAKAP",
+      "qty": 3,
+      "harga_satuan": 10000,
+      "diskon": 0
+    },
+    {
+      "nama_item": "IKAN SALMON",
+      "qty": 1,
+      "harga_satuan": 80000,
+      "diskon": 0
+    }
+  ]
+}
+
+### Hapus Transaksi (ganti uuid-transaksi dengan ID yang valid)
+DELETE {{baseUrl}}/transaksi/uuid-transaksi
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Pemasukan/Hutang by Bulan & Tahun
+GET {{baseUrl}}/transaksi/pemasukan?bulan=1&tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Pemasukan/Hutang by Tahun saja
+GET {{baseUrl}}/transaksi/pemasukan?tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Pengeluaran/Piutang by Bulan & Tahun
+GET {{baseUrl}}/transaksi/pengeluaran?bulan=1&tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Pengeluaran/Piutang by Tahun saja
+GET {{baseUrl}}/transaksi/pengeluaran?tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Semua Transaksi by Tahun-Bulan-Hari
+GET {{baseUrl}}/transaksi?tahun=2024&bulan=1&hari=17
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Semua Transaksi by Tahun-Bulan
+GET {{baseUrl}}/transaksi?tahun=2024&bulan=1
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Semua Transaksi by Tahun
+GET {{baseUrl}}/transaksi?tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Semua Transaksi dengan Pagination (page start from 0)
+GET {{baseUrl}}/transaksi?page=0&size=5
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Transaksi by Bulan dengan Pagination
+GET {{baseUrl}}/transaksi?tahun=2024&bulan=1&page=0&size=10
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil Summary Hutang/Piutang by Tahun (Total saja)
+GET {{baseUrl}}/transaksi/hutang?tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Ambil List Hutang & Piutang by Tahun dengan Pagination (Detail records)
+GET {{baseUrl}}/transaksi/hutang/list?tahun=2024&page=0&size=10
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Summary Pemasukan vs Pengeluaran by Hari
+GET {{baseUrl}}/transaksi/summary?tahun=2024&bulan=1&hari=17
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Summary Pemasukan vs Pengeluaran by Bulan
+GET {{baseUrl}}/transaksi/summary?tahun=2024&bulan=1
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Summary Pemasukan vs Pengeluaran by Tahun
+GET {{baseUrl}}/transaksi/summary?tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
+### Summary Detail per Bulan dalam Setahun (Array 12 bulan)
+GET {{baseUrl}}/transaksi/summary/detail?tahun=2024
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
