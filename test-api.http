@@ -18,6 +18,11 @@ Content-Type: application/json
   "nama": "IKAN KAKAP"
 }
 
+### Search Item untuk Autosuggestion
+GET {{baseUrl}}/item/search?q=ika&limit=5
+Authorization: Bearer {{token}}
+x-user-id: {{userId}}
+
 ### Ambil Semua Item
 GET {{baseUrl}}/item
 Authorization: Bearer {{token}}

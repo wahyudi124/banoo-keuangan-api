@@ -56,6 +56,31 @@ Deno.serve(async (req: Request) => {
     
     // ITEM ENDPOINTS
     if (pathParts[1] === 'item') {
+      // GET /item/search?q=ika - Search items for autosuggestion
+      if (req.method === 'GET' && pathParts[2] === 'search') {
+        const query = url.searchParams.get('q');
+        const limit = parseInt(url.searchParams.get('limit') || '10');
+        
+        if (!query || query.trim().length < 1) {
+          return new Response(JSON.stringify({ success: true, data: [] }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        const { data, error } = await supabase
+          .from('item')
+          .select('id, nama')
+          .eq('user_id', user.id)
+          .ilike('nama', `%${query.trim()}%`)
+          .order('nama')
+          .limit(limit);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
       // GET /item - Read all items
       if (req.method === 'GET' && pathParts.length === 2) {
         const { data, error } = await supabase
@@ -81,21 +106,28 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        // Check existing item case insensitive
+        const { data: existingItem } = await supabase
+          .from('item')
+          .select('id')
+          .eq('user_id', user.id)
+          .ilike('nama', payload.nama.trim())
+          .single();
+        
+        if (existingItem) {
+          return new Response(JSON.stringify({ error: 'Item dengan nama ini sudah ada' }), {
+            status: 409,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
         const { data, error } = await supabase
           .from('item')
           .insert({ user_id: user.id, nama: payload.nama.trim() })
           .select()
           .single();
 
-        if (error) {
-          if (error.code === '23505') {
-            return new Response(JSON.stringify({ error: 'Item dengan nama ini sudah ada' }), {
-              status: 409,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-          throw error;
-        }
+        if (error) throw error;
 
         return new Response(JSON.stringify({ success: true, data }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -114,6 +146,22 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        // Check existing item case insensitive (exclude current item)
+        const { data: existingItem } = await supabase
+          .from('item')
+          .select('id')
+          .eq('user_id', user.id)
+          .ilike('nama', payload.nama.trim())
+          .neq('id', itemId)
+          .single();
+        
+        if (existingItem) {
+          return new Response(JSON.stringify({ error: 'Item dengan nama ini sudah ada' }), {
+            status: 409,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
         const { data, error } = await supabase
           .from('item')
           .update({ nama: payload.nama.trim() })
@@ -122,15 +170,7 @@ Deno.serve(async (req: Request) => {
           .select()
           .single();
 
-        if (error) {
-          if (error.code === '23505') {
-            return new Response(JSON.stringify({ error: 'Item dengan nama ini sudah ada' }), {
-              status: 409,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-          throw error;
-        }
+        if (error) throw error;
 
         if (!data) {
           return new Response(JSON.stringify({ error: 'Item tidak ditemukan' }), {
@@ -681,47 +721,46 @@ Deno.serve(async (req: Request) => {
           });
         }
 
-        // Update items jika ada
+        // Replace items jika ada
         let itemsData = [];
         if (payload.items && payload.items.length > 0) {
+          // Delete all existing items first
+          await supabase
+            .from('transaksi_item')
+            .delete()
+            .eq('transaksi_id', transaksiId);
+          
+          // Check dan insert item baru jika belum ada (case insensitive)
           for (const item of payload.items) {
-            if (item.id) {
-              // Update existing item
-              const { data: updatedItems, error: updateError } = await supabase
-                .from('transaksi_item')
-                .update({
-                  nama_item: item.nama_item,
-                  qty: item.qty,
-                  harga_satuan: item.harga_satuan,
-                  diskon: item.diskon || 0
-                })
-                .eq('id', item.id)
-                .eq('transaksi_id', transaksiId)
-                .select();
-              
-              if (updateError) throw updateError;
-              if (updatedItems && updatedItems.length > 0) {
-                itemsData.push(updatedItems[0]);
-              }
-            } else {
-              // Insert new item
-              const { data: newItems, error: insertError } = await supabase
-                .from('transaksi_item')
-                .insert({
-                  transaksi_id: transaksiId,
-                  nama_item: item.nama_item,
-                  qty: item.qty,
-                  harga_satuan: item.harga_satuan,
-                  diskon: item.diskon || 0
-                })
-                .select();
-              
-              if (insertError) throw insertError;
-              if (newItems && newItems.length > 0) {
-                itemsData.push(newItems[0]);
-              }
+            const { data: existingItem } = await supabase
+              .from('item')
+              .select('id')
+              .eq('user_id', user.id)
+              .ilike('nama', item.nama_item)
+              .single();
+            
+            if (!existingItem) {
+              // Insert item baru jika belum ada
+              await supabase
+                .from('item')
+                .insert({ user_id: user.id, nama: item.nama_item });
             }
           }
+          
+          // Insert all new items
+          itemsData = payload.items.map(item => ({
+            transaksi_id: transaksiId,
+            nama_item: item.nama_item,
+            qty: item.qty,
+            harga_satuan: item.harga_satuan,
+            diskon: item.diskon || 0
+          }));
+
+          const { error: itemsError } = await supabase
+            .from('transaksi_item')
+            .insert(itemsData);
+
+          if (itemsError) throw itemsError;
         }
 
         return new Response(JSON.stringify({ 
@@ -803,6 +842,23 @@ Deno.serve(async (req: Request) => {
       // Insert items jika ada
       let itemsData = [];
       if (payload.items && payload.items.length > 0) {
+        // Check dan insert item baru jika belum ada (case insensitive)
+        for (const item of payload.items) {
+          const { data: existingItem } = await supabase
+            .from('item')
+            .select('id')
+            .eq('user_id', user.id)
+            .ilike('nama', item.nama_item)
+            .single();
+          
+          if (!existingItem) {
+            // Insert item baru jika belum ada
+            await supabase
+              .from('item')
+              .insert({ user_id: user.id, nama: item.nama_item });
+          }
+        }
+        
         itemsData = payload.items.map(item => ({
           transaksi_id: transaksi.id,
           nama_item: item.nama_item,
